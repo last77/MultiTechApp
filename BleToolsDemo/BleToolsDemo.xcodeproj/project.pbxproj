@@ -7,8 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		D1B5F4502EE988050044D1EA /* BleToolsKit.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = D1B5F44E2EE987FE0044D1EA /* BleToolsKit.xcframework */; };
-		D1B5F4512EE988050044D1EA /* BleToolsKit.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = D1B5F44E2EE987FE0044D1EA /* BleToolsKit.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		D10941672EEAB7E1004552FC /* BleToolsKit.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = D10941652EEAB7DB004552FC /* BleToolsKit.xcframework */; };
+		D10941682EEAB7E1004552FC /* BleToolsKit.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = D10941652EEAB7DB004552FC /* BleToolsKit.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		D1D34B7F2EE197F800F98219 /* SnapKit in Frameworks */ = {isa = PBXBuildFile; productRef = D1D34B7E2EE197F800F98219 /* SnapKit */; };
 /* End PBXBuildFile section */
 
@@ -36,7 +36,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
-				D1B5F4512EE988050044D1EA /* BleToolsKit.xcframework in Embed Frameworks */,
+				D10941682EEAB7E1004552FC /* BleToolsKit.xcframework in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -44,7 +44,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		D1B5F44E2EE987FE0044D1EA /* BleToolsKit.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; path = BleToolsKit.xcframework; sourceTree = "<group>"; };
+		D10941652EEAB7DB004552FC /* BleToolsKit.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; path = BleToolsKit.xcframework; sourceTree = "<group>"; };
 		D1DE19412EA6303400362942 /* BleToolsDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BleToolsDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D1DE195A2EA6303700362942 /* BleToolsDemoTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BleToolsDemoTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D1DE19642EA6303700362942 /* BleToolsDemoUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BleToolsDemoUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -86,7 +86,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D1B5F4502EE988050044D1EA /* BleToolsKit.xcframework in Frameworks */,
+				D10941672EEAB7E1004552FC /* BleToolsKit.xcframework in Frameworks */,
 				D1D34B7F2EE197F800F98219 /* SnapKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -123,7 +123,7 @@
 				D1DE19672EA6303700362942 /* BleToolsDemoUITests */,
 				D1DE19422EA6303400362942 /* Products */,
 				D1D34B742EE194C100F98219 /* Frameworks */,
-				D1B5F44E2EE987FE0044D1EA /* BleToolsKit.xcframework */,
+				D10941652EEAB7DB004552FC /* BleToolsKit.xcframework */,
 			);
 			sourceTree = "<group>";
 		};

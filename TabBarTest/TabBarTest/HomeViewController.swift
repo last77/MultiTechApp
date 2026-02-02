@@ -12,6 +12,7 @@ class HomeViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         setupUI()
+        testAlert()
         
         let plainHex = "88dd1f15030000000000000000000000000000009C"
         let keyIndex = 0
@@ -25,6 +26,15 @@ class HomeViewController: UIViewController {
                 print(back.uppercased() == plainHex.uppercased() ? "✅ OK" : "❌ Not Match")
             }
         }
+        
+    }
+    
+    func testAlert(){
+        AlertHelper.alert(title: "11111", confirmHandler: { action in
+            print("111111")
+        }, cancelHandler: { cancel in
+            
+        }, viewController: self)
     }
     
     // MARK: - Setup Methods
@@ -47,4 +57,5 @@ class HomeViewController: UIViewController {
         ])
         title = "首页"
     }
+    
 }

@@ -280,59 +280,33 @@ internal final class BleCentral: NSObject {
     // MARK: - 发送绑定指令
     private func sendBindCommand() {
         guard let writeChar = writeCharacteristic,
-              let peripheral = writeChar.service?.peripheral else {
+              let peripheral = writeChar.service?.peripheral,
+              let device = discoveredDevices[peripheral.identifier] else {
             #if DEBUG
-            print("写特征未准备好，无法发送绑定指令")
+            print("写特征未准备好或设备信息不存在，无法发送绑定指令")
             #endif
             return
         }
         
-        if isNewDevice {
-            // 新设备：发送原绑定指令 88dd1E00000000000000000000000000000000
-            let commandString = "88dd1E00000000000000000000000000000000"
-            
-            // 计算 CRC 校验值
-            let crc = DataConverter.calculateCRC(from: commandString)
-            
-            // 完整指令
-            let fullCommand = commandString + crc
-            
-            // 转换为 Data
-            let commandData = DataConverter.dataWithHexString(fullCommand)
-            
-            let logMsg = "📲 [新设备] 发送绑定指令: \(fullCommand)"
-            onLog?(logMsg)
+        // 使用 BleDeviceManager 构建绑定指令
+        let commandHex = BleDeviceManager.shared.buildBindCommand(for: device, poolIndex: poolIndex)
+        
+        guard !commandHex.isEmpty else {
             #if DEBUG
-            print(logMsg)
-            print("[新设备] 指令数据: \(commandData as NSData)")
+            print("❌ 绑定指令构建失败")
             #endif
-            
-            // 写入数据
-            peripheral.writeValue(commandData, for: writeChar, type: .withResponse)
-        } else {
-            // 老设备：发送 e200 + 当前时间的十六进制 + 校验和
-            let currentHexTime = BleDataConverter.getCurrentHexTimes()
-            let info = "e200" + currentHexTime
-            
-            // 计算校验和
-            let endStr = DataConverter.getTerminator(from: info)
-            
-            // 完整指令
-            let sendInfo = info + endStr
-            
-            // 转换为 Data
-            let commandData = DataConverter.dataWithHexString(sendInfo)
-            
-            let logMsg = "📲 [老设备] 发送绑定指令: \(sendInfo), 长度: \(sendInfo.count)"
-            onLog?(logMsg)
-            #if DEBUG
-            print(logMsg)
-            print("[老设备] 指令数据: \(commandData as NSData)")
-            #endif
-            
-            // 写入数据
-            peripheral.writeValue(commandData, for: writeChar, type: .withResponse)
+            return
         }
+        
+        let logMsg = "📲 [\(device.isNewDevice ? "新设备" : "老设备")] 发送绑定指令: \(commandHex)"
+        onLog?(logMsg)
+        #if DEBUG
+        print(logMsg)
+        #endif
+        
+        // 转换为 Data 并发送
+        let commandData = DataConverter.dataWithHexString(commandHex)
+        peripheral.writeValue(commandData, for: writeChar, type: .withResponse)
     }
     
     // MARK: - 测试方法（fvc, vc, mvv）
@@ -340,19 +314,19 @@ internal final class BleCentral: NSObject {
     /// FVC 测试方法
     /// - Parameter onError: 错误回调
     internal func fvc(onError: @escaping (Error) -> Void) {
-        sendTestCommand(command: "e2010101", onError: onError)
+        sendSpirometerCommand(.fvc, onError: onError)
     }
     
     /// VC 测试方法
     /// - Parameter onError: 错误回调
     internal func vc(onError: @escaping (Error) -> Void) {
-        sendTestCommand(command: "e2010201", onError: onError)
+        sendSpirometerCommand(.vc, onError: onError)
     }
     
     /// MVV 测试方法
     /// - Parameter onError: 错误回调
     internal func mvv(onError: @escaping (Error) -> Void) {
-        sendTestCommand(command: "e2010301", onError: onError)
+        sendSpirometerCommand(.mvv, onError: onError)
     }
     
     // MARK: - 停止测试方法
@@ -360,59 +334,57 @@ internal final class BleCentral: NSObject {
     /// 停止 FVC 测试方法
     /// - Parameter onError: 错误回调
     internal func stopFvc(onError: @escaping (Error) -> Void) {
-        guard let writeChar = writeCharacteristic else {
-            onError(BleError.unknown)
-            return
-        }
-        sendCommandWithCrc(origin: "e2010100e4", usePool: true, to: writeChar, onError: onError)
+        sendSpirometerCommand(.stopFvc, onError: onError)
     }
     
     /// 停止 VC 测试方法
     /// - Parameter onError: 错误回调
     internal func stopVc(onError: @escaping (Error) -> Void) {
-        guard let writeChar = writeCharacteristic else {
-            onError(BleError.unknown)
-            return
-        }
-        sendCommandWithCrc(origin: "e2010200e5", usePool: true, to: writeChar, onError: onError)
+        sendSpirometerCommand(.stopVc, onError: onError)
     }
     
     /// 停止 MVV 测试方法
     /// - Parameter onError: 错误回调
     internal func stopMvv(onError: @escaping (Error) -> Void) {
-        guard let writeChar = writeCharacteristic else {
-            onError(BleError.unknown)
-            return
-        }
-        sendCommandWithCrc(origin: "e2010300e6", usePool: true, to: writeChar, onError: onError)
+        sendSpirometerCommand(.stopMvv, onError: onError)
     }
     
-    /// 发送测试命令的通用方法
+    /// 发送肺活量计命令的通用方法
     /// - Parameters:
-    ///   - command: 命令字符串（如 "e2010101", "e2010201", "e2010301"）
+    ///   - command: 肺活量计命令枚举
     ///   - onError: 错误回调
-    private func sendTestCommand(command: String, onError: @escaping (Error) -> Void) {
+    private func sendSpirometerCommand(_ command: SpirometerCommand, onError: @escaping (Error) -> Void) {
         guard let writeChar = writeCharacteristic else {
-            let errorMsg = "❌ 写特征未准备好，无法发送测试命令"
+            let errorMsg = "❌ 写特征未准备好，无法发送命令"
             onLog?(errorMsg)
             #if DEBUG
             print(errorMsg)
             #endif
-            onError(BleError.unknown)
+            onError(BleError.characteristicNotFound)
             return
         }
         
-        // 使用 getTerminator 计算校验和并拼接
-        let terminator = DataConverter.getTerminator(from: command)
-        let commandHex = command + terminator
+        // 使用 SpirometerCommandBuilder 构建命令
+        let commandImpl = SpirometerCommandImpl(command: command)
+        let commandHex = commandImpl.buildCommand(isNewDevice: isNewDevice, poolIndex: poolIndex)
         
-        let logMsg = "📤 测试命令: \(command) + Terminator(\(terminator)) = \(commandHex)"
+        guard !commandHex.isEmpty else {
+            let errorMsg = "❌ 命令构建失败"
+            onLog?(errorMsg)
+            #if DEBUG
+            print(errorMsg)
+            #endif
+            onError(BleError.invalidData)
+            return
+        }
+        
+        let logMsg = "📤 发送 \(command.rawValue) 命令: \(commandHex)"
         onLog?(logMsg)
         #if DEBUG
         print(logMsg)
         #endif
         
-        // 发送命令（测试阶段使用固定密钥）
+        // 发送命令（使用密钥池加密）
         sendCommandWithCrc(origin: commandHex, usePool: true, to: writeChar, onError: onError)
     }
     
@@ -426,7 +398,7 @@ internal final class BleCentral: NSObject {
     ///   - onError: 错误回调
     private func sendCommandWithCrc(origin: String, usePool: Bool, to characteristic: CBCharacteristic, onError: @escaping (Error) -> Void) {
         guard !origin.isEmpty else {
-            onError(BleError.unknown)
+            onError(BleError.invalidData)
             return
         }
         
@@ -442,38 +414,32 @@ internal final class BleCentral: NSObject {
             return
         }
         
-        // 新设备：使用加密逻辑
-        let payload = origin
-        var cipher: String?
-        
-        if usePool {
-            // 使用密钥池加密
-            cipher = AESCBCUtil.encryptHexStringZeroPadding(payload, keyIndex: poolIndex)
-            let logMsg = "🔐 [新设备] 密钥池加密(\(poolIndex)): \(cipher ?? "加密失败")"
+        // 新设备：使用 BleCommandBuilder 加密
+        guard let encryptedHex = BleCommandBuilder.buildEncryptedCommand(
+            origin,
+            isNewDevice: isNewDevice,
+            poolIndex: poolIndex,
+            usePool: usePool
+        ) else {
+            let logMsg = "❌ [新设备] 加密失败"
             onLog?(logMsg)
             #if DEBUG
             print(logMsg)
             #endif
-        } else {
-            // 测试阶段：先加 CRC，再固定密钥加密
-            let payloadWithCRC = payload + DataConverter.calculateCRCFromHexString(payload)
-            cipher = AESCBCUtil.encryptHexStringWithFixedKey(payloadWithCRC)
-            let logMsg = "🔑 [新设备] 固定密钥加密: \(cipher ?? "加密失败")"
-            onLog?(logMsg)
-            #if DEBUG
-            print(logMsg)
-            #endif
-        }
-        
-        guard let encryptedHex = cipher, !encryptedHex.isEmpty else {
-            onError(BleError.unknown)
+            onError(BleError.encryptionFailed)
             return
         }
         
-        // 转换为 Data
-        let commandData = DataConverter.data(from: encryptedHex)
+        let logMsg = "🔐 [新设备] \(usePool ? "密钥池(\(poolIndex))" : "固定密钥")加密完成"
+        onLog?(logMsg)
+        #if DEBUG
+        print(logMsg)
+        print("   原始: \(origin)")
+        print("   加密: \(encryptedHex)")
+        #endif
         
-        // 写入数据
+        // 转换为 Data 并写入
+        let commandData = DataConverter.data(from: encryptedHex)
         write(data: commandData, to: characteristic, onError: onError)
     }
 }

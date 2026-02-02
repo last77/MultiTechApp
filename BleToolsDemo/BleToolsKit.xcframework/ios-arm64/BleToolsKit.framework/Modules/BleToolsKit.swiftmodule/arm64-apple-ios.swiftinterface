@@ -9,10 +9,30 @@ import Swift
 import _Concurrency
 import _StringProcessing
 import _SwiftConcurrencyShims
+public enum SpirometerCommand : Swift.String, Swift.CaseIterable {
+  case bind
+  case fvc
+  case vc
+  case mvv
+  case stopFvc
+  case stopVc
+  case stopMvv
+  #if compiler(>=5.3) && $NonescapableTypes
+  public init?(rawValue: Swift.String)
+  #endif
+  public typealias AllCases = [BleToolsKit.SpirometerCommand]
+  public typealias RawValue = Swift.String
+  nonisolated public static var allCases: [BleToolsKit.SpirometerCommand] {
+    get
+  }
+  public var rawValue: Swift.String {
+    get
+  }
+}
 @_hasMissingDesignatedInitializers final public class BleAPI {
   public static let shared: BleToolsKit.BleAPI
   final public var timeout: Swift.Double
-  final public var onDeviceFound: ((Swift.String, Swift.String, Swift.Int) -> Swift.Void)?
+  final public var onDeviceFound: ((BleToolsKit.BleDeviceInfo) -> Swift.Void)?
   final public var onConnected: (() -> Swift.Void)?
   final public var onDataReceived: ((Swift.String) -> Swift.Void)?
   final public var onError: ((Swift.String) -> Swift.Void)?
@@ -20,11 +40,18 @@ import _SwiftConcurrencyShims
     get
     set
   }
-  final public func scan(includeConnectedDevices: Swift.Bool = true)
+  final public var onDisconnected: (() -> Swift.Void)?
+  #if compiler(>=5.3) && $NonescapableTypes
+  final public func scan(includeConnectedDevices: Swift.Bool = true, customFilter: (any BleToolsKit.BleFilterProtocol)? = nil)
+  #endif
   final public func connect(deviceId: Swift.String)
   final public func send(_ hexString: Swift.String)
   final public func stopScan()
   final public func disconnect()
+  #if compiler(>=5.3) && $NonescapableTypes
+  final public func getCurrentDevice() -> BleToolsKit.BleDeviceInfo?
+  #endif
+  final public func getScannedDevices() -> [BleToolsKit.BleDeviceInfo]
   final public func fvc()
   final public func vc()
   final public func mvv()
@@ -33,3 +60,80 @@ import _SwiftConcurrencyShims
   final public func stopMvv()
   @objc deinit
 }
+public struct BleDeviceInfo {
+  public let deviceId: Swift.String
+  public let deviceName: Swift.String
+  public let rssi: Swift.Int
+  public let macAddress: Swift.String?
+  public let isNewDevice: Swift.Bool
+  public let deviceType: BleToolsKit.BleDeviceType
+  public let isConnected: Swift.Bool
+}
+public protocol BleCommandProtocol {
+  var commandName: Swift.String { get }
+  var rawCommand: Swift.String { get }
+  var requiresEncryption: Swift.Bool { get }
+  var useKeyPool: Swift.Bool { get }
+  func buildCommand(isNewDevice: Swift.Bool, poolIndex: Swift.Int) -> Swift.String
+}
+@_hasMissingDesignatedInitializers public class BleCommandBuilder {
+  public static func buildWithChecksum(_ origin: Swift.String) -> Swift.String
+  public static func buildWithCRC(_ origin: Swift.String) -> Swift.String
+  #if compiler(>=5.3) && $NonescapableTypes
+  public static func buildEncryptedCommand(_ origin: Swift.String, isNewDevice: Swift.Bool, poolIndex: Swift.Int = 0, usePool: Swift.Bool = true) -> Swift.String?
+  #endif
+  @objc deinit
+}
+public protocol BleDeviceProtocol {
+  var deviceType: BleToolsKit.BleDeviceType { get }
+  var identifier: Swift.String { get }
+  var name: Swift.String { get }
+  var rssi: Swift.Int { get }
+  #if compiler(>=5.3) && $NonescapableTypes
+  var macAddress: Swift.String? { get }
+  #endif
+  var isNewDevice: Swift.Bool { get }
+  var peripheral: CoreBluetooth.CBPeripheral { get }
+}
+public enum BleDeviceType : Swift.String {
+  case spirometer
+  case oximeter
+  case thermometer
+  case unknown
+  #if compiler(>=5.3) && $NonescapableTypes
+  public init?(rawValue: Swift.String)
+  #endif
+  public typealias RawValue = Swift.String
+  public var rawValue: Swift.String {
+    get
+  }
+}
+public protocol BleFilterProtocol {
+  func shouldInclude(peripheral: CoreBluetooth.CBPeripheral) -> Swift.Bool
+  var filterName: Swift.String { get }
+}
+public class CompositeFilter : BleToolsKit.BleFilterProtocol {
+  public enum LogicType {
+    case and
+    case or
+    public static func == (a: BleToolsKit.CompositeFilter.LogicType, b: BleToolsKit.CompositeFilter.LogicType) -> Swift.Bool
+    public func hash(into hasher: inout Swift.Hasher)
+    public var hashValue: Swift.Int {
+      get
+    }
+  }
+  public init(filters: [any BleToolsKit.BleFilterProtocol], logic: BleToolsKit.CompositeFilter.LogicType = .and)
+  public func shouldInclude(peripheral: CoreBluetooth.CBPeripheral) -> Swift.Bool
+  public var filterName: Swift.String {
+    get
+  }
+  @objc deinit
+}
+extension BleToolsKit.SpirometerCommand : Swift.Equatable {}
+extension BleToolsKit.SpirometerCommand : Swift.Hashable {}
+extension BleToolsKit.SpirometerCommand : Swift.RawRepresentable {}
+extension BleToolsKit.BleDeviceType : Swift.Equatable {}
+extension BleToolsKit.BleDeviceType : Swift.Hashable {}
+extension BleToolsKit.BleDeviceType : Swift.RawRepresentable {}
+extension BleToolsKit.CompositeFilter.LogicType : Swift.Equatable {}
+extension BleToolsKit.CompositeFilter.LogicType : Swift.Hashable {}

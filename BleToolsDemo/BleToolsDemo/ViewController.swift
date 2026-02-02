@@ -86,13 +86,13 @@ final class ViewController: UIViewController {
         append("App Ready.")
         // BLE SDK 回调配置
         BleAPI.shared.timeout = 10
-        BleAPI.shared.onDeviceFound = { [weak self] deviceId, deviceName, rssi in
-            if rssi == 0 {
-                self?.append("📱 发现设备: \(deviceName) [系统已连接]")
+        BleAPI.shared.onDeviceFound = { [weak self] deviceInfo in
+            if deviceInfo.rssi == 0 {
+                self?.append("📱 发现设备: \(deviceInfo.deviceName) [系统已连接]")
             } else {
-                self?.append("📱 发现设备: \(deviceName)  RSSI:\(rssi)")
+                self?.append("📱 发现设备: \(deviceInfo.deviceName)  RSSI:\(deviceInfo.rssi)")
             }
-            self?.addOrUpdateDevice(deviceId: deviceId, deviceName: deviceName, rssi: rssi)
+            self?.addOrUpdateDevice(deviceId: deviceInfo.deviceId, deviceName: deviceInfo.deviceName, rssi: deviceInfo.rssi)
         }
         BleAPI.shared.onConnected = { [weak self] in
             self?.append("✅ 设备已连接")
