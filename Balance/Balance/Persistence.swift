@@ -14,15 +14,27 @@ struct PersistenceController {
     static let preview: PersistenceController = {
         let result = PersistenceController(inMemory: true)
         let viewContext = result.container.viewContext
-        for _ in 0..<10 {
-            let newItem = Item(context: viewContext)
-            newItem.timestamp = Date()
+        // 预览用 LedgerEntry 样本数据
+        let purposes = ["餐饮", "交通", "购物", "工资", "兼职"]
+        let base = Date()
+        let dates = [base, Calendar.current.date(byAdding: .day, value: -1, to: base) ?? base, Calendar.current.date(byAdding: .day, value: -2, to: base) ?? base]
+        for (i, date) in dates.enumerated() {
+            let entry = LedgerEntry(context: viewContext)
+            entry.date = date
+            entry.createdAt = date
+            entry.currency = "CNY"
+            entry.purpose = purposes[i % purposes.count]
+            if i % 2 == 0 {
+                entry.expense = Double((i + 1) * 25)
+                entry.income = 0
+            } else {
+                entry.expense = 0
+                entry.income = Double((i + 1) * 500)
+            }
         }
         do {
             try viewContext.save()
         } catch {
-            // Replace this implementation with code to handle the error appropriately.
-            // fatalError() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
             let nsError = error as NSError
             fatalError("Unresolved error \(nsError), \(nsError.userInfo)")
         }
