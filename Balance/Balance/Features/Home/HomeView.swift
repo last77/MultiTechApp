@@ -22,9 +22,14 @@ struct HomeView: View {
     @State private var incomeText = ""
     @State private var purposeText = ""
     @FocusState private var focusedField: Field?
+    @AppStorage("selectedCurrency") private var selectedCurrencyRaw: String = AppCurrency.CNY.rawValue
 
     enum Field {
         case expense, income, purpose
+    }
+
+    private var currency: AppCurrency {
+        AppCurrency(rawValue: selectedCurrencyRaw) ?? .CNY
     }
 
     private var totalIncome: Double {
@@ -38,8 +43,6 @@ struct HomeView: View {
     private var balance: Double {
         totalIncome - totalExpense
     }
-
-    private var currency: AppCurrency { .CNY }
 
     var body: some View {
         NavigationStack {
@@ -87,14 +90,20 @@ struct HomeView: View {
                     TextField("0.00", text: $expenseText)
                         .keyboardType(.decimalPad)
                         .focused($focusedField, equals: .expense)
-                        .padding(12)
+                        .frame(maxWidth: .infinity, minHeight: 48)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 12)
                         .background(Color(.secondarySystemGroupedBackground))
+                        .contentShape(Rectangle())
                         .clipShape(RoundedRectangle(cornerRadius: 10))
                 }
+                .frame(maxWidth: .infinity)
                 Text(currency.symbol)
                     .font(.title2)
                     .foregroundStyle(.secondary)
             }
+            .contentShape(Rectangle())
+            .onTapGesture { focusedField = .expense }
 
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 6) {
@@ -104,14 +113,20 @@ struct HomeView: View {
                     TextField("0.00", text: $incomeText)
                         .keyboardType(.decimalPad)
                         .focused($focusedField, equals: .income)
-                        .padding(12)
+                        .frame(maxWidth: .infinity, minHeight: 48)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 12)
                         .background(Color(.secondarySystemGroupedBackground))
+                        .contentShape(Rectangle())
                         .clipShape(RoundedRectangle(cornerRadius: 10))
                 }
+                .frame(maxWidth: .infinity)
                 Text(currency.symbol)
                     .font(.title2)
                     .foregroundStyle(.secondary)
             }
+            .contentShape(Rectangle())
+            .onTapGesture { focusedField = .income }
 
             VStack(alignment: .leading, spacing: 6) {
                 Text("用途")
@@ -119,19 +134,34 @@ struct HomeView: View {
                     .foregroundStyle(.secondary)
                 TextField("如：餐饮、交通", text: $purposeText)
                     .focused($focusedField, equals: .purpose)
-                    .padding(12)
+                    .frame(maxWidth: .infinity, minHeight: 48)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 12)
                     .background(Color(.secondarySystemGroupedBackground))
+                    .contentShape(Rectangle())
                     .clipShape(RoundedRectangle(cornerRadius: 10))
             }
+            .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
+            .onTapGesture { focusedField = .purpose }
 
-            HStack {
-                Text("货币")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Text(currency.displayName)
-                    .font(.subheadline.weight(.medium))
+            Button {
+                selectedCurrencyRaw = currency == .CNY ? AppCurrency.USD.rawValue : AppCurrency.CNY.rawValue
+            } label: {
+                HStack {
+                    Text("货币")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Text(currency.displayName)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.primary)
+                    Image(systemName: "arrow.left.arrow.right.circle.fill")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
             }
+            .buttonStyle(.plain)
 
             Button(action: addEntry) {
                 HStack {
@@ -178,7 +208,7 @@ struct HomeView: View {
             } else {
                 LazyVStack(spacing: 0) {
                     ForEach(entries, id: \.objectID) { entry in
-                        EntryRow(entry: entry, currency: currency)
+                        EntryRow(entry: entry, currency: currency, onDelete: { deleteEntry(entry) })
                             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                                 Button(role: .destructive) {
                                     deleteEntry(entry)
@@ -201,7 +231,7 @@ struct HomeView: View {
             Text("盈亏")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
-            Text(formatMoney(abs(balance)))
+            Text(formatBalanceWithSign(balance))
                 .font(.system(size: 28, weight: .bold, design: .rounded))
                 .foregroundStyle(balance >= 0 ? Color.green : Color.red)
             if balance < 0 {
@@ -225,7 +255,7 @@ struct HomeView: View {
         entry.date = selectedDate
         entry.expense = expense
         entry.income = income
-        entry.currency = currency.rawValue
+        entry.currency = selectedCurrencyRaw
         entry.purpose = purposeText.isEmpty ? nil : purposeText
         entry.createdAt = Date()
 
@@ -258,19 +288,31 @@ struct HomeView: View {
         formatter.maximumFractionDigits = 2
         return (formatter.string(from: NSNumber(value: value)) ?? "0.00") + " " + currency.symbol
     }
+
+    /// 盈亏显示：大于等于 0 显示 + 金额，小于 0 显示 - 金额
+    private func formatBalanceWithSign(_ value: Double) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.minimumFractionDigits = 2
+        formatter.maximumFractionDigits = 2
+        let numStr = formatter.string(from: NSNumber(value: abs(value))) ?? "0.00"
+        let sign = value >= 0 ? "+ " : "- "
+        return sign + numStr + " " + currency.symbol
+    }
 }
 
 // MARK: - 单条记录行
 private struct EntryRow: View {
     let entry: LedgerEntry
     let currency: AppCurrency
+    var onDelete: (() -> Void)?
 
     private var displayPurpose: String {
         (entry.purpose?.isEmpty == false) ? (entry.purpose ?? "") : "—"
     }
 
     var body: some View {
-        HStack {
+        HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(displayPurpose)
                     .font(.subheadline.weight(.medium))
@@ -292,6 +334,14 @@ private struct EntryRow: View {
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.red)
                 }
+            }
+            if onDelete != nil {
+                Button(role: .destructive, action: { onDelete?() }, label: {
+                    Image(systemName: "trash")
+                        .font(.body)
+                        .foregroundStyle(.red)
+                })
+                .buttonStyle(.borderless)
             }
         }
         .padding(.horizontal, 16)
