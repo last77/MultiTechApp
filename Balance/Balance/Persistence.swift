@@ -31,7 +31,18 @@ struct PersistenceController {
                 entry.expense = 0
                 entry.income = Double((i + 1) * 500)
             }
+
+            let activity = LedgerActivity(context: viewContext)
+            activity.id = UUID()
+            activity.timestamp = date
+            activity.action = i % 2 == 0 ? "新增记录" : "删除记录"
+            activity.detail = "\(entry.purpose ?? "未设置") · \(entry.currency ?? "CNY")"
         }
+        let editActivity = LedgerActivity(context: viewContext)
+        editActivity.id = UUID()
+        editActivity.timestamp = Calendar.current.date(byAdding: .hour, value: -6, to: base) ?? base
+        editActivity.action = "修改用途"
+        editActivity.detail = "购物 → 生活日用"
         do {
             try viewContext.save()
         } catch {
